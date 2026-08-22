@@ -10,8 +10,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const KALSHI_API_KEY = process.env.KALSHI_API_KEY;
-const KALSHI_PRIVATE_KEY = process.env.KALSHI_PRIVATE_KEY;
 const BOT_URL = process.env.BOT_URL || 'https://trading-factory-production.up.railway.app';
+
+// Fix: Handle Railway's newline stripping
+let rawKey = process.env.KALSHI_PRIVATE_KEY || '';
+rawKey = rawKey.replace(/\\n/g, '\n'); // Convert \n strings to real newlines
+const KALSHI_PRIVATE_KEY = rawKey.trim();
 
 const SERIES = ['KXBTC15M','KXETH15M','KXSOL15M','KXRPL15M','KXDOGE15M','KXADA15M','KXAVAX15M'];
 
