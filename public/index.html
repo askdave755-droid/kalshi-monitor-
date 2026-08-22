@@ -40,7 +40,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0f;
 .pnl-row{display:flex;justify-content:space-between;padding:10px 12px;background:#111;border:1px solid #222;border-radius:10px;margin-bottom:12px}
 .pnl-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
 </style>
-<base target="_blank">
 </head>
 <body>
 <div class="header">
@@ -141,7 +140,7 @@ async function loadBalance(){
   try{
     const res=await fetch('/api/balance');
     const data=await res.json();
-    document.getElementById('balance').textContent='$'+parseFloat(data.balance||0).toFixed(2);
+    document.getElementById('balance').textContent='$'+(parseFloat(data.balance||0)/100).toFixed(2);
   }catch(e){document.getElementById('balance').textContent='N/A'}
 }
 
