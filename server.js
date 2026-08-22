@@ -17,11 +17,18 @@ const SERIES = ['KXBTC15M','KXETH15M','KXSOL15M','KXRPL15M','KXDOGE15M','KXADA15
 
 function signRequest(method, path) {
   const timestamp = Date.now().toString();
-  const msg = timestamp + method + path;
-  const sig = crypto.createSign('RSA-SHA256');
-  sig.update(msg);
-  const signature = sig.sign(KALSHI_PRIVATE_KEY, 'base64');
-  return { timestamp, signature };
+  const message = timestamp + method.toUpperCase() + path;
+  
+  const signature = crypto.sign('sha256', Buffer.from(message), {
+    key: KALSHI_PRIVATE_KEY,
+    padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
+  });
+  
+  return {
+    timestamp,
+    signature: signature.toString('base64')
+  };
 }
 
 async function kalshiGet(path) {
