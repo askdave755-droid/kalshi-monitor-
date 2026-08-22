@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v18a Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0f;color:#e0e0e0;padding:16px;max-width:480px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.header h1{font-size:20px;font-weight:700}
+.badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.live{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3)}
+.slot-timer{background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px}
+.slot-timer .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:6px}
+.slot-timer .time{font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.slot-timer .info{font-size:12px;color:#888;margin-top:4px}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#666;margin-bottom:10px}
+.market{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#111;border:1px solid #222;border-radius:10px;margin-bottom:8px}
+.market-left{display:flex;align-items:center;gap:10px}
+.market-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.market-name{font-size:14px;font-weight:600}
+.market-size{font-size:10px;color:#666}
+.market-right{text-align:right}
+.market-price{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.market-status{font-size:10px;margin-top:2px}
+.status-in{color:#22c55e}
+.status-out{color:#666}
+.band-viz{background:#111;border:1px solid #222;border-radius:10px;padding:14px;margin-bottom:16px}
+.band-track{position:relative;height:28px;background:#1a1a1a;border-radius:6px;overflow:hidden;margin:10px 0 24px}
+.band-zone{position:absolute;left:55%;width:20%;height:100%;background:rgba(34,197,94,0.12);border-left:2px solid #22c55e;border-right:2px solid #22c55e}
+.band-marker{position:absolute;top:-3px;width:4px;height:34px;background:#ef4444;border-radius:2px;transition:left .5s ease}
+.band-labels{display:flex;justify-content:space-between;font-size:10px;color:#444}
+.trades{background:#111;border:1px solid #222;border-radius:10px;padding:14px}
+.empty{color:#444;text-align:center;padding:20px;font-size:12px}
+.bot-status{display:flex;align-items:center;gap:6px;font-size:11px;color:#666;margin-bottom:12px}
+.dot{width:6px;height:6px;border-radius:50%}
+.dot.green{background:#22c55e}
+.dot.red{background:#ef4444}
+.pnl-row{display:flex;justify-content:space-between;padding:10px 12px;background:#111;border:1px solid #222;border-radius:10px;margin-bottom:12px}
+.pnl-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>v18a Monitor</h1>
+    <div class="bot-status"><span class="dot green" id="bot-dot"></span><span id="bot-text">Checking...</span></div>
+  </div>
+  <span class="badge live" id="status-badge">LIVE_25</span>
+</div>
+
+<div class="slot-timer">
+  <div class="label">Next 15-Min Slot</div>
+  <div class="time" id="countdown">--:--</div>
+  <div class="info" id="slot-info">--</div>
+</div>
+
+<div class="pnl-row">
+  <div>
+    <div class="section-title" style="margin:0">Portfolio Balance</div>
+    <div class="pnl-val" id="balance" style="color:#e0e0e0">$--</div>
+  </div>
+  <div style="text-align:right">
+    <div class="section-title" style="margin:0">Open Positions</div>
+    <div class="pnl-val" id="positions" style="color:#888">--</div>
+  </div>
+</div>
+
+<div class="markets">
+  <div class="section-title">Active Markets</div>
+  <div id="markets-list"></div>
+</div>
+
+<div class="band-viz">
+  <div class="section-title">Price Band Filter (55¢–75¢)</div>
+  <div class="band-track">
+    <div class="band-zone"></div>
+    <div class="band-marker" id="btc-marker" style="left:0%"></div>
+  </div>
+  <div class="band-labels"><span>0¢</span><span>25¢</span><span>50¢</span><span>75¢</span><span>$1</span></div>
+  <p style="text-align:center;margin-top:10px;font-size:11px;color:#666" id="band-status">Loading...</p>
+</div>
+
+<div class="trades">
+  <div class="section-title">Recent Trades</div>
+  <div id="trades-list"><div class="empty">No trades yet today</div></div>
+</div>
+
+<script>
+const SERIES=[
+  {ticker:'KXBTC15M',name:'BTC',icon:'₿',color:'#3b82f6',size:2},
+  {ticker:'KXETH15M',name:'ETH',icon:'Ξ',color:'#22c55e',size:2},
+  {ticker:'KXSOL15M',name:'SOL',icon:'S',color:'#a855f7',size:1},
+  {ticker:'KXRPL15M',name:'XRP',icon:'X',color:'#6366f1',size:1},
+  {ticker:'KXDOGE15M',name:'DOGE',icon:'Ð',color:'#f59e0b',size:1},
+  {ticker:'KXADA15M',name:'ADA',icon:'A',color:'#06b6d4',size:1},
+  {ticker:'KXAVAX15M',name:'AVAX',icon:'◈',color:'#ef4444',size:1}
+];
+
+function updateTimer(){
+  const now=new Date();
+  const utc=new Date(now.getTime()+now.getTimezoneOffset()*60000);
+  const slotMin=Math.floor(utc.getMinutes()/15)*15;
+  const next=new Date(utc);
+  next.setMinutes(slotMin+15,0,0);
+  const diff=next-utc;
+  const m=Math.floor(diff/60000),s=Math.floor((diff%60000)/1000);
+  document.getElementById('countdown').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  document.getElementById('slot-info').textContent=`${String(utc.getHours()).padStart(2,'0')}:${String(slotMin).padStart(2,'0')} → ${String(utc.getHours()).padStart(2,'0')}:${String(slotMin+15).padStart(2,'0')} UTC`;
+}
+setInterval(updateTimer,1000);
+updateTimer();
+
+async function loadMarkets(){
+  const list=document.getElementById('markets-list');
+  list.innerHTML='';
+  for(const s of SERIES){
+    try{
+      const res=await fetch(`/api/markets/${s.ticker}`);
+      const data=await res.json();
+      const m=data.markets?.[0];
+      if(!m) continue;
+      const yesPrice=Math.round(parseFloat(m.yes_ask_dollars||m.yes_bid_dollars)*100);
+      const inBand=yesPrice>=55&&yesPrice<=75;
+      const div=document.createElement('div');
+      div.className='market';
+      div.innerHTML=`<div class="market-left"><div class="market-icon" style="background:${s.color}15;color:${s.color}">${s.icon}</div><div><div class="market-name">${s.name} 15M</div><div class="market-size">Size: ${s.size}</div></div></div><div class="market-right"><div class="market-price" style="color:${inBand?'#22c55e':'#e0e0e0'}">${yesPrice}¢</div><div class="market-status ${inBand?'status-in':'status-out'}">${inBand?'IN BAND ✓':'OUT OF BAND'}</div></div>`;
+      list.appendChild(div);
+      if(s.ticker==='KXBTC15M'){
+        document.getElementById('btc-marker').style.left=yesPrice+'%';
+        document.getElementById('band-status').textContent=`BTC at ${yesPrice}¢ — ${inBand?'IN BAND — bot will trade':'BELOW BAND — no trade'}`;
+        document.getElementById('band-status').style.color=inBand?'#22c55e':'#666';
+      }
+    }catch(e){}
+  }
+}
+
+async function loadBalance(){
+  try{
+    const res=await fetch('/api/balance');
+    const data=await res.json();
+    document.getElementById('balance').textContent='$'+parseFloat(data.balance||0).toFixed(2);
+  }catch(e){document.getElementById('balance').textContent='N/A'}
+}
+
+async function loadPositions(){
+  try{
+    const res=await fetch('/api/positions');
+    const data=await res.json();
+    document.getElementById('positions').textContent=data.positions?.length||0;
+  }catch(e){document.getElementById('positions').textContent='N/A'}
+}
+
+async function loadBotHealth(){
+  try{
+    const res=await fetch('/api/bot-health');
+    const data=await res.json();
+    const ok=data.status==='ok';
+    document.getElementById('bot-dot').className='dot '+(ok?'green':'red');
+    document.getElementById('bot-text').textContent=ok?'Bot connected':'Bot unreachable';
+  }catch(e){
+    document.getElementById('bot-dot').className='dot red';
+    document.getElementById('bot-text').textContent='Bot unreachable';
+  }
+}
+
+loadMarkets();loadBalance();loadPositions();loadBotHealth();
+setInterval(()=>{loadMarkets();loadBalance();loadPositions();loadBotHealth();},5000);
+</script>
+</body>
+</html>
